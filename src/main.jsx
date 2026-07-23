@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   AlertTriangle,
@@ -22,6 +22,7 @@ import {
   FileImage,
   FileText,
   FileCode2,
+  FileSpreadsheet,
   FileUp,
   GitBranch,
   Home,
@@ -31,6 +32,7 @@ import {
   ListFilter,
   Lightbulb,
   MapPin,
+  Mic,
   Menu,
   MousePointer2,
   Navigation,
@@ -76,12 +78,12 @@ const initialObjects = [
   { id: 'f1', type: 'feeder', name: 'Фидер Ф-1', subtitle: 'Северная линия · 0,4 кВ', status: 'ok', progress: 67, coords: [56.3191, 38.1835] },
   { id: 'f2', type: 'feeder', name: 'Фидер Ф-2', subtitle: 'Центральная линия · 0,4 кВ', status: 'warning', progress: 42, coords: [56.3172, 38.1848] },
   { id: 'f3', type: 'feeder', name: 'Фидер Ф-3', subtitle: 'Южная линия · 0,4 кВ', status: 'muted', progress: 18, coords: [56.3158, 38.1861] },
-  { id: 'p1', type: 'pole', name: 'Опора № 12', subtitle: 'Ф-1 · 3-стоечная', status: 'ok', progress: 100, coords: [56.3200, 38.1819], legCount: 3, schemeLegCount: 3, meterType: 'НАРТИС-И-300', meter: '№ 40178301', phase: 'A B C', house: true, lighting: 'От линии', roadSide: 'Справа' },
-  { id: 'p2', type: 'pole', name: 'Опора № 13', subtitle: 'Ф-1 · 2-стоечная', status: 'warning', progress: 75, coords: [56.3206, 38.1801], legCount: 2, schemeLegCount: 2, meterType: 'Меркурий 234', meter: '№ 18293411', phase: 'A B C', house: true, lighting: 'От уличного', roadSide: 'Слева' },
-  { id: 'p3', type: 'pole', name: 'Опора № 14', subtitle: 'Ф-1 · 2-стоечная', status: 'danger', progress: 50, coords: [56.3214, 38.1784], legCount: 3, schemeLegCount: 2, meterType: 'Не найден', meter: 'Не найден', phase: 'A B', house: false, lighting: 'Нет', roadSide: 'Справа' },
-  { id: 'p4', type: 'pole', name: 'Опора № 21', subtitle: 'Ф-2 · 3-стоечная', status: 'ok', progress: 100, coords: [56.3169, 38.1825], legCount: 3, schemeLegCount: 3, meterType: 'НАРТИС-И-300', meter: '№ 40178325', phase: 'A B C', house: true, lighting: 'От линии', roadSide: 'Справа' },
-  { id: 'p5', type: 'pole', name: 'Опора № 22', subtitle: 'Ф-2 · 2-стоечная', status: 'warning', progress: 60, coords: [56.3161, 38.1810], legCount: 2, schemeLegCount: 2, meterType: 'СЕ 102', meter: '№ 50382011', phase: 'A', house: false, lighting: 'Нет', roadSide: 'Слева' },
-  { id: 'p6', type: 'pole', name: 'Опора № 31', subtitle: 'Ф-3 · 2-стоечная', status: 'muted', progress: 30, coords: [56.3147, 38.1870], legCount: 2, schemeLegCount: 2, meterType: 'Не проверен', meter: 'Не проверен', phase: 'A B C', house: true, lighting: 'От уличного', roadSide: 'Справа' },
+  { id: 'p1', type: 'pole', feederId: 'f1', name: 'Опора № 12', subtitle: 'Ф-1 · 3-стоечная', status: 'ok', progress: 100, coords: [56.3200, 38.1819], legCount: 3, schemeLegCount: 3, meterType: 'НАРТИС-И-300', meter: '№ 40178301', phase: 'A B C', house: true, lighting: 'От линии', roadSide: 'Справа', meters: [{ id: 'm1', type: 'НАРТИС-И-300', splitNumber: '40178301', nonSplitNumber: '', coords: [56.3200, 38.1819], phase: '3ф', isue: 'да', polling: 'да' }] },
+  { id: 'p2', type: 'pole', feederId: 'f1', name: 'Опора № 13', subtitle: 'Ф-1 · 2-стоечная', status: 'warning', progress: 75, coords: [56.3206, 38.1801], legCount: 2, schemeLegCount: 2, meterType: 'Меркурий 234', meter: '№ 18293411', phase: 'A B C', house: true, lighting: 'От уличного', roadSide: 'Слева', meters: [{ id: 'm2', type: 'Меркурий 234', splitNumber: '18293411', nonSplitNumber: '', coords: [56.3206, 38.1801], phase: '3ф', isue: 'да', polling: 'да' }] },
+  { id: 'p3', type: 'pole', feederId: 'f1', name: 'Опора № 14', subtitle: 'Ф-1 · 2-стоечная', status: 'danger', progress: 50, coords: [56.3214, 38.1784], legCount: 3, schemeLegCount: 2, meterType: 'Не найден', meter: 'Не найден', phase: 'A B', house: false, lighting: 'Нет', roadSide: 'Справа', meters: [{ id: 'm3', type: 'Не найден', splitNumber: '', nonSplitNumber: '', coords: [56.3214, 38.1784], phase: '', isue: 'нет', polling: 'нет' }] },
+  { id: 'p4', type: 'pole', feederId: 'f2', name: 'Опора № 21', subtitle: 'Ф-2 · 3-стоечная', status: 'ok', progress: 100, coords: [56.3169, 38.1825], legCount: 3, schemeLegCount: 3, meterType: 'НАРТИС-И-300', meter: '№ 40178325', phase: 'A B C', house: true, lighting: 'От линии', roadSide: 'Справа', meters: [{ id: 'm4', type: 'НАРТИС-И-300', splitNumber: '40178325', nonSplitNumber: '', coords: [56.3169, 38.1825], phase: '3ф', isue: 'да', polling: 'да' }] },
+  { id: 'p5', type: 'pole', feederId: 'f2', name: 'Опора № 22', subtitle: 'Ф-2 · 2-стоечная', status: 'warning', progress: 60, coords: [56.3161, 38.1810], legCount: 2, schemeLegCount: 2, meterType: 'СЕ 102', meter: '№ 50382011', phase: 'A', house: false, lighting: 'Нет', roadSide: 'Слева', meters: [{ id: 'm5', type: 'СЕ 102', splitNumber: '50382011', nonSplitNumber: '', coords: [56.3161, 38.1810], phase: '1ф', isue: 'нет', polling: 'нет' }] },
+  { id: 'p6', type: 'pole', feederId: 'f3', name: 'Опора № 31', subtitle: 'Ф-3 · 2-стоечная', status: 'muted', progress: 30, coords: [56.3147, 38.1870], legCount: 2, schemeLegCount: 2, meterType: 'Не проверен', meter: 'Не проверен', phase: 'A B C', house: true, lighting: 'От уличного', roadSide: 'Справа', meters: [{ id: 'm6', type: 'Не проверен', splitNumber: '', nonSplitNumber: '', coords: [56.3147, 38.1870], phase: '3ф', isue: '', polling: '' }] },
 ];
 
 const defaultProject = {
@@ -187,14 +189,141 @@ function normalizeProject(value) {
   };
 }
 
+function normalizePhase(value) {
+  const phase = String(value || '').toLowerCase().replace(/\s+/g, '');
+  if (phase.includes('1') || phase === 'a') return '1ф';
+  if (phase.includes('3') || phase === 'abc' || phase === 'aбв') return '3ф';
+  return value || '';
+}
+
+function normalizeMeter(value, index = 0, fallbackCoords = initialKtp.coords) {
+  const source = value && typeof value === 'object' ? value : {};
+  const coords = Array.isArray(source.coords) && source.coords.length === 2
+    ? source.coords.map(Number)
+    : [...fallbackCoords];
+  const legacyNumber = String(source.number || source.meter || '').replace(/^№\s*/i, '').trim();
+  const usableLegacyNumber = /^(не найден|не проверен|нет)$/i.test(legacyNumber) ? '' : legacyNumber;
+  return {
+    id: String(source.id || `meter-${Date.now()}-${index}`),
+    type: source.type || source.meterType || '',
+    splitNumber: String(source.splitNumber || source.numberSplit || '').trim(),
+    nonSplitNumber: String(source.nonSplitNumber || source.numberNonSplit || usableLegacyNumber || '').trim(),
+    coords: coords.every(Number.isFinite) ? coords : [...fallbackCoords],
+    phase: normalizePhase(source.phase),
+    isue: String(source.isue ?? source.isueStatus ?? '').trim(),
+    polling: String(source.polling ?? source.poll ?? source.pollingStatus ?? '').trim(),
+    notes: String(source.notes || '').trim(),
+  };
+}
+
+function createDefaultMeter(coords = initialKtp.coords) {
+  return normalizeMeter({ id: `meter-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, coords, phase: '3ф' }, 0, coords);
+}
+
 function normalizeObjects(value) {
   if (!Array.isArray(value)) return initialObjects;
-  return value.map((object) => ({
-    ...object,
-    coords: Array.isArray(object.coords) && object.coords.length === 2
+  const feeders = value.filter((object) => object?.type === 'feeder');
+  const fallbackFeeder = feeders[0];
+  return value.map((object) => {
+    const coords = Array.isArray(object.coords) && object.coords.length === 2
       ? object.coords.map(Number)
-      : initialKtp.coords,
-  }));
+      : [...initialKtp.coords];
+    if (object.type !== 'pole') return { ...object, coords };
+    const feeder = feeders.find((item) => item.id === object.feederId)
+      || feeders.find((item) => getFeederCode(item.name) === getFeederCode(object.subtitle || ''))
+      || fallbackFeeder;
+    const meters = Array.isArray(object.meters) && object.meters.length
+      ? object.meters.map((meter, index) => normalizeMeter(meter, index, coords))
+      : [normalizeMeter({
+        id: `${object.id}-meter-1`,
+        type: object.meterType,
+        meter: object.meter,
+        phase: object.phase,
+        coords,
+      }, 0, coords)];
+    return {
+      ...object,
+      coords,
+      feederId: object.feederId || feeder?.id || '',
+      subtitle: object.subtitle || `${feeder?.name || 'Фидер'} · ${object.name || 'опора'}`,
+      meters,
+    };
+  });
+}
+
+const EXCEL_COLUMNS = [
+  'Номер ПУ (Сплит)',
+  'Номер ПУ (не Сплит)',
+  'GPS координаты домовладения',
+  'Фазность ПУ 1ф/3ф',
+  '№ опоры',
+  'Наличие ИСУЭ',
+  'Наличие опроса',
+];
+
+function poleNumber(value = '') {
+  return String(value).replace(/^опора\s*№?\s*/i, '').trim();
+}
+
+function getMetersForPole(pole) {
+  if (Array.isArray(pole?.meters) && pole.meters.length) return pole.meters;
+  return [normalizeMeter({ type: pole?.meterType, meter: pole?.meter, phase: pole?.phase, coords: pole?.coords }, 0, pole?.coords || initialKtp.coords)];
+}
+
+function getExcelRows(project, objects) {
+  const poles = objects.filter((object) => object.type === 'pole');
+  const rows = [];
+  poles.forEach((pole) => {
+    const meters = getMetersForPole(pole);
+    meters.forEach((meter) => {
+      const coords = Array.isArray(meter.coords) && meter.coords.length === 2 ? meter.coords : pole.coords;
+      rows.push({
+        'Номер ПУ (Сплит)': meter.splitNumber || '',
+        'Номер ПУ (не Сплит)': meter.nonSplitNumber || '',
+        'GPS координаты домовладения': Array.isArray(coords) ? coords.map((item) => Number(item).toFixed(6)).join(', ') : '',
+        'Фазность ПУ 1ф/3ф': meter.phase || '',
+        '№ опоры': poleNumber(pole.name),
+        'Наличие ИСУЭ': meter.isue || '',
+        'Наличие опроса': meter.polling || '',
+      });
+    });
+  });
+  return rows;
+}
+
+async function exportProjectExcel(project, objects) {
+  // Excel-библиотека тяжёлая для полевого приложения, поэтому загружается
+  // только в момент реального экспорта.
+  const XLSX = await import('xlsx');
+  const rows = getExcelRows(project, objects);
+  const workbook = XLSX.utils.book_new();
+  const sheet = XLSX.utils.json_to_sheet(rows, { header: EXCEL_COLUMNS, skipHeader: false });
+  sheet['!cols'] = [
+    { wch: 22 }, { wch: 22 }, { wch: 28 }, { wch: 18 }, { wch: 14 }, { wch: 17 }, { wch: 17 },
+  ];
+  if (rows.length) sheet['!autofilter'] = { ref: `A1:G${rows.length + 1}` };
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Лист осмотра');
+
+  const structure = polesToStructureRows(project, objects);
+  const structureSheet = XLSX.utils.json_to_sheet(structure, { header: ['ТП', 'Фидер', '№ опоры', 'ПУ', 'Номер ПУ (Сплит)', 'Номер ПУ (не Сплит)'] });
+  structureSheet['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 22 }, { wch: 22 }];
+  XLSX.utils.book_append_sheet(workbook, structureSheet, 'Структура сети');
+  XLSX.writeFile(workbook, `${project.settlement || project.ktp?.name || 'kontur'}-осмотр.xlsx`);
+  return rows.length;
+}
+
+function polesToStructureRows(project, objects) {
+  const feeders = objects.filter((object) => object.type === 'feeder');
+  const feederById = new Map(feeders.map((feeder) => [feeder.id, feeder]));
+  const poles = objects.filter((object) => object.type === 'pole');
+  return poles.flatMap((pole) => getMetersForPole(pole).map((meter) => ({
+    ТП: project?.ktp?.name || 'Текущая ТП',
+    Фидер: feederById.get(pole.feederId)?.name || getFeederCode(pole.subtitle || ''),
+    '№ опоры': poleNumber(pole.name),
+    ПУ: meter.type || '',
+    'Номер ПУ (Сплит)': meter.splitNumber || '',
+    'Номер ПУ (не Сплит)': meter.nonSplitNumber || '',
+  })));
 }
 
 function saveBlob(filename, content, mime) {
@@ -206,6 +335,47 @@ function saveBlob(filename, content, mime) {
   anchor.click();
   anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+const speechDigitWords = {
+  ноль: '0', один: '1', одна: '1', два: '2', две: '2', три: '3', четыре: '4',
+  пять: '5', шесть: '6', семь: '7', восемь: '8', девять: '9',
+};
+
+function normalizeVoiceDigits(value) {
+  let text = String(value || '').toLowerCase();
+  Object.entries(speechDigitWords).forEach(([word, digit]) => {
+    text = text.replace(new RegExp(`\\b${word}\\b`, 'g'), digit);
+  });
+  return text.replace(/[^0-9]/g, '');
+}
+
+function SpeechInputButton({ onResult, label = 'Ввести голосом' }) {
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const start = () => {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      window.alert('Голосовой ввод не поддерживается этим браузером. Используйте Chrome или браузер Telegram.');
+      return;
+    }
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.lang = 'ru-RU';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => setListening(true);
+    recognition.onresult = (event) => onResult(event.results?.[0]?.[0]?.transcript || '');
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+  useEffect(() => () => recognitionRef.current?.stop(), []);
+  return <button className={`voice-button ${listening ? 'listening' : ''}`} type="button" onClick={start} title={label} aria-label={label}><Mic size={13} /></button>;
 }
 
 const checks = [
@@ -223,68 +393,127 @@ function tgInit() {
   if (tg) {
     tg.ready();
     tg.expand();
-    tg.setHeaderColor('#07101d');
-    tg.setBackgroundColor('#f5f7fa');
+    tg.setHeaderColor('#ffffff');
+    tg.setBackgroundColor('#f3f5f4');
   }
 }
 
 function YandexMap({ objects, selectedId, onSelect, showScheme, showLayers, center, search, onSearch, onLocate, onToggleLayers }) {
   const mapRef = useRef(null);
   const ymapsRef = useRef(null);
-  const apiKey = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
-  const route = useMemo(() => objects.filter((o) => o.type === 'pole'), [objects]);
+  const collectionRef = useRef(null);
+  const routeRef = useRef(null);
+  const onSelectRef = useRef(onSelect);
+  const apiKey = String(import.meta.env.VITE_YANDEX_MAPS_API_KEY || '').trim();
+  const [mapState, setMapState] = useState(apiKey ? 'loading' : 'demo');
+  const [mapError, setMapError] = useState('');
+  const demoPoles = useMemo(() => objects.filter((o) => o.type === 'pole'), [objects]);
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
 
   useEffect(() => {
     tgInit();
-    if (!apiKey) return undefined;
+    if (!apiKey) {
+      setMapState('demo');
+      setMapError('');
+      return undefined;
+    }
+
+    let cancelled = false;
     const scriptId = 'yandex-maps-script';
+    setMapState('loading');
+    setMapError('');
     const init = () => {
-      if (!window.ymaps || !mapRef.current || ymapsRef.current) return;
+      if (cancelled || !window.ymaps || !mapRef.current || ymapsRef.current) return;
       window.ymaps.ready(() => {
-        if (!mapRef.current || ymapsRef.current) return;
-        const map = new window.ymaps.Map(mapRef.current, {
-          center: center || initialKtp.coords,
-          zoom: 14,
-          controls: ['zoomControl', 'geolocationControl'],
-        });
-        const collection = new window.ymaps.GeoObjectCollection();
-        objects.forEach((object) => {
-          const mark = new window.ymaps.Placemark(object.coords, {
-            balloonContentHeader: object.name,
-            balloonContentBody: object.subtitle,
-          }, { preset: object.type === 'feeder' ? 'islands#blueCircleDotIcon' : 'islands#orangeCircleDotIcon' });
-          mark.events.add('click', () => onSelect(object.id));
-          collection.add(mark);
-        });
-        map.geoObjects.add(collection);
-        map.geoObjects.add(new window.ymaps.Polyline(route.map((p) => p.coords), {}, { strokeColor: '#2b7fff', strokeWidth: 4, strokeOpacity: 0.75 }));
-        ymapsRef.current = map;
+        try {
+          if (cancelled || !mapRef.current || ymapsRef.current) return;
+          const map = new window.ymaps.Map(mapRef.current, {
+            center: center || initialKtp.coords,
+            zoom: 14,
+            controls: ['zoomControl', 'geolocationControl'],
+          });
+          ymapsRef.current = map;
+          setMapState('ready');
+        } catch (error) {
+          setMapState('error');
+          setMapError(error instanceof Error ? error.message : 'Не удалось создать карту.');
+          console.error('[Контур] Ошибка инициализации Яндекс.Карт:', error);
+        }
       });
     };
+
+    const fail = () => {
+      if (cancelled) return;
+      setMapState('error');
+      setMapError('Скрипт Яндекс.Карт не загрузился. Проверьте API-ключ, домен GitHub Pages и доступ к api-maps.yandex.ru.');
+    };
+
     let script = document.getElementById(scriptId);
     let waitingForScript = false;
     if (!script) {
       script = document.createElement('script');
       script.id = scriptId;
-      script.src = `https://api-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU`;
+      script.src = `https://api-maps.yandex.ru/2.1/?apikey=${encodeURIComponent(apiKey)}&lang=ru_RU`;
       script.onload = init;
+      script.onerror = fail;
       document.body.appendChild(script);
     } else if (window.ymaps) {
       init();
     } else {
       waitingForScript = true;
       script.addEventListener('load', init, { once: true });
+      script.addEventListener('error', fail, { once: true });
     }
+    const timeoutId = window.setTimeout(() => {
+      if (!cancelled && !window.ymaps && !ymapsRef.current) {
+        setMapState('error');
+        setMapError('Яндекс.Карты не ответили за 12 секунд. Проверьте сеть и ограничения API-ключа.');
+      }
+    }, 12000);
     return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
       if (waitingForScript) script.removeEventListener('load', init);
+      if (waitingForScript) script.removeEventListener('error', fail);
+      collectionRef.current = null;
+      routeRef.current = null;
       if (ymapsRef.current) { ymapsRef.current.destroy(); ymapsRef.current = null; }
     };
-  }, [apiKey, center, objects]);
+  }, [apiKey]);
+
+  // Обновляем объекты на уже созданной карте отдельно. Раньше любое изменение
+  // данных пересоздавало всю карту и давало заметные подвисания на телефоне.
+  useEffect(() => {
+    const map = ymapsRef.current;
+    if (!map || !window.ymaps || mapState !== 'ready') return;
+    if (center?.length === 2) map.setCenter(center);
+    if (collectionRef.current) map.geoObjects.remove(collectionRef.current);
+    const collection = new window.ymaps.GeoObjectCollection();
+    objects.forEach((object) => {
+      const mark = new window.ymaps.Placemark(object.coords, {
+        balloonContentHeader: object.name,
+        balloonContentBody: object.subtitle,
+      }, { preset: object.type === 'feeder' ? 'islands#blueCircleDotIcon' : 'islands#orangeCircleDotIcon' });
+      mark.events.add('click', () => onSelectRef.current(object.id));
+      collection.add(mark);
+    });
+    map.geoObjects.add(collection);
+    collectionRef.current = collection;
+    if (routeRef.current) map.geoObjects.remove(routeRef.current);
+    const route = objects.filter((object) => object.type === 'pole');
+    routeRef.current = route.length > 1
+      ? new window.ymaps.Polyline(route.map((pole) => pole.coords), {}, { strokeColor: '#2b7fff', strokeWidth: 4, strokeOpacity: 0.75 })
+      : null;
+    if (routeRef.current) map.geoObjects.add(routeRef.current);
+  }, [objects, center, mapState]);
 
   return (
     <div className="map-shell">
       {apiKey && <div className="yandex-map" ref={mapRef} />}
-      <div className={`demo-map ${apiKey ? 'demo-map-hidden' : ''}`}>
+      <div className={`demo-map ${mapState === 'ready' ? 'demo-map-hidden' : ''}`}>
         <div className="map-grid" />
         <div className="map-road road-a" />
         <div className="map-road road-b" />
@@ -296,7 +525,7 @@ function YandexMap({ objects, selectedId, onSelect, showScheme, showLayers, cent
         <div className="route-line route-2" />
         <div className="route-line route-3" />
         <div className="ktp-marker"><Zap size={15} fill="currentColor" /> <span>КТП-103</span></div>
-        {objects.filter((o) => o.type === 'pole').map((object, index) => (
+        {demoPoles.map((object, index) => (
           <button
             key={object.id}
             className={`map-marker ${object.status} ${selectedId === object.id ? 'selected' : ''}`}
@@ -309,6 +538,8 @@ function YandexMap({ objects, selectedId, onSelect, showScheme, showLayers, cent
         ))}
         {showScheme && <div className="scheme-overlay"><GitBranch size={16} /> Режим схемы · фидер Ф-1</div>}
         {!apiKey && <div className="demo-note"><Info size={14} /> Деморежим · подключите ключ Яндекс Карт для спутниковой карты</div>}
+        {apiKey && mapState === 'loading' && <div className="demo-note"><Info size={14} /> Загружаем Яндекс.Карты…</div>}
+        {apiKey && mapState === 'error' && <div className="demo-note map-error-note"><Info size={14} /> Яндекс.Карты недоступны · показана резервная схема. {mapError}</div>}
       </div>
       <div className="map-topbar">
         <div className="map-search"><Search size={16} /><input aria-label="Поиск по карте" placeholder="Поиск по адресу, ПУ или опоре" value={search} onChange={(event) => onSearch(event.target.value)} /><kbd>⌘ K</kbd></div>
@@ -342,7 +573,7 @@ function PhotoStrip({ photos, onAdd, inputRef }) {
   );
 }
 
-function KtpPanel({ onClose, ktp, onExport, onEdit, onSync, onOpenAddress }) {
+function KtpPanel({ onClose, ktp, onExport, onExportExcel, onEdit, onSync, onOpenAddress }) {
   const [photos, setPhotos] = useState([]);
   const [documentName, setDocumentName] = useState('Схема КТП-103.pdf');
   const photoInputRef = useRef(null);
@@ -359,20 +590,51 @@ function KtpPanel({ onClose, ktp, onExport, onEdit, onSync, onOpenAddress }) {
       <PhotoStrip photos={photos} onAdd={addPhoto} inputRef={photoInputRef} />
       <div className="detail-section"><div className="section-title-row"><div><h3>Документы и схема</h3><p>Приложите актуальную однолинейную схему</p></div></div><label className="upload-doc"><FileText size={20} /><div><strong>{documentName}</strong><span>{documentName === 'Схема КТП-103.pdf' ? 'Последняя версия · 1.2 МБ' : 'Файл выбран для текущей сессии'}</span></div><Check className="doc-check" size={17} /><input type="file" accept="application/pdf,.pdf,image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) setDocumentName(file.name); }} /></label></div>
     </div>
-    <div className="panel-footer"><button className="secondary-button" type="button" onClick={onExport}><Download size={16} /> Экспорт</button><button className="primary-button" type="button" onClick={onSync}><Cloud size={16} /> Синхронизировать</button></div>
+    <div className="panel-footer"><button className="secondary-button" type="button" onClick={onExport}><Download size={16} /> JSON</button><button className="secondary-button" type="button" onClick={onExportExcel}><FileSpreadsheet size={16} /> Excel</button><button className="primary-button" type="button" onClick={onSync}><Cloud size={16} /> Синхронизировать</button></div>
   </aside>;
 }
 
 function MoreIcon() { return <span className="more-icon"><i /><i /><i /></span>; }
 function DataCell({ label, value, danger }) { return <div className={`data-cell ${danger ? 'danger-cell' : ''}`}><span>{label}</span><strong>{value}</strong></div>; }
 
+const meterQuickPresets = [
+  { label: 'НАРТИС · 3ф · ИСУЭ · опрос', values: { type: 'НАРТИС-И-300', phase: '3ф', isue: 'да', polling: 'да' } },
+  { label: 'НАРТИС · 3ф · без опроса', values: { type: 'НАРТИС-И-300', phase: '3ф', isue: 'да', polling: 'нет' } },
+  { label: 'Меркурий · 3ф', values: { type: 'Меркурий 234', phase: '3ф' } },
+  { label: 'СЕ 102 · 1ф', values: { type: 'СЕ 102', phase: '1ф' } },
+];
+
+function MeterCard({ meter, index, onChange, onRemove, onCopyCoords, compact = false }) {
+  const update = (key, value) => onChange({ ...meter, [key]: value });
+  const applyPreset = (values) => onChange({ ...meter, ...values });
+  const updateCoords = (value) => {
+    const coords = String(value).split(',').map((item) => Number(item.trim()));
+    if (coords.length === 2 && coords.every(Number.isFinite)) update('coords', coords);
+  };
+  return <div className={`meter-card ${compact ? 'compact' : ''}`}>
+    <div className="meter-card-head"><div><span className="eyebrow">Прибор учета {index + 1}</span><strong>{meter.type || 'Тип не указан'}</strong></div><button className="remove-button" type="button" onClick={onRemove} title="Удалить ПУ"><Trash2 size={14} /></button></div>
+    <div className="meter-quick-entry"><div className="meter-quick-title"><Sparkles size={13} /><span>Быстрый шаблон</span></div><div className="quick-chip-row">{meterQuickPresets.map((preset) => <button type="button" key={preset.label} onClick={() => applyPreset(preset.values)}>{preset.label}</button>)}{onCopyCoords && <button type="button" onClick={onCopyCoords}>GPS опоры</button>}</div></div>
+    <div className="builder-grid">
+      <label className="builder-field"><span>Тип ПУ</span><select value={meter.type || ''} onChange={(event) => update('type', event.target.value)}><option value="">Не указан</option><option>НАРТИС-И-300</option><option>Меркурий 234</option><option>СЕ 102</option><option>РиМ 384</option><option>Не найден</option></select></label>
+      <Field label="Номер ПУ (Сплит)" value={meter.splitNumber} inputMode="numeric" voice voiceMode="number" onChange={(value) => update('splitNumber', value)} />
+      <Field label="Номер ПУ (не Сплит)" value={meter.nonSplitNumber} inputMode="numeric" voice voiceMode="number" onChange={(value) => update('nonSplitNumber', value)} />
+      <label className="builder-field"><span>Фазность ПУ</span><div className="segmented"><button type="button" className={meter.phase === '1ф' ? 'active' : ''} onClick={() => update('phase', '1ф')}>1 фаза</button><button type="button" className={meter.phase === '3ф' ? 'active' : ''} onClick={() => update('phase', '3ф')}>3 фазы</button></div></label>
+      <label className="builder-field"><span>Наличие ИСУЭ</span><div className="segmented"><button type="button" className={meter.isue === 'да' ? 'active' : ''} onClick={() => update('isue', 'да')}>Да</button><button type="button" className={meter.isue === 'нет' ? 'active' : ''} onClick={() => update('isue', 'нет')}>Нет</button></div></label>
+      <label className="builder-field"><span>Наличие опроса</span><div className="segmented"><button type="button" className={meter.polling === 'да' ? 'active' : ''} onClick={() => update('polling', 'да')}>Да</button><button type="button" className={meter.polling === 'нет' ? 'active' : ''} onClick={() => update('polling', 'нет')}>Нет</button></div></label>
+      <Field label="GPS домовладения" value={(meter.coords || initialKtp.coords).join(', ')} onChange={updateCoords} />
+      {!compact && <Field label="Примечание по ПУ" value={meter.notes} voice onChange={(value) => update('notes', value)} />}
+    </div>
+  </div>;
+}
+
 function PolePanel({ object, checksState, setChecksState, onClose, onLocate, onSave }) {
   const [photos, setPhotos] = useState([]);
   const [notes, setNotes] = useState('');
-  const [draft, setDraft] = useState(() => ({ ...object, coords: [...(object.coords || initialKtp.coords)] }));
+  const makeDraft = (value) => ({ ...value, coords: [...(value.coords || initialKtp.coords)], meters: getMetersForPole(value).map((meter, index) => normalizeMeter(meter, index, value.coords || initialKtp.coords)) });
+  const [draft, setDraft] = useState(() => makeDraft(object));
   const photoInputRef = useRef(null);
   useEffect(() => {
-    setDraft({ ...object, coords: [...(object.coords || initialKtp.coords)] });
+    setDraft(makeDraft(object));
     setNotes(object.notes || '');
   }, [object]);
   const addPhoto = (event) => {
@@ -381,49 +643,74 @@ function PolePanel({ object, checksState, setChecksState, onClose, onLocate, onS
   };
   const toggle = (id) => setChecksState((state) => ({ ...state, [id]: !state[id] }));
   const update = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
+  const updateMeter = (index, value) => setDraft((current) => ({ ...current, meters: current.meters.map((meter, meterIndex) => meterIndex === index ? value : meter) }));
+  const addMeter = () => setDraft((current) => ({ ...current, meters: [...current.meters, createDefaultMeter(current.coords)] }));
+  const removeMeter = (index) => setDraft((current) => ({ ...current, meters: current.meters.filter((_, meterIndex) => meterIndex !== index) }));
   const updateCoords = (value) => {
     const coords = value.split(',').map((item) => Number(item.trim()));
-    if (coords.length === 2 && coords.every(Number.isFinite)) update('coords', coords);
+    if (coords.length === 2 && coords.every(Number.isFinite)) setDraft((current) => ({ ...current, coords, meters: current.meters.map((meter) => ({ ...meter, coords })) }));
   };
   const localChecks = checks.filter((check) => ['map', 'meter', 'phase', 'house', 'shunt', 'light', 'photo'].includes(check.id));
-  return <aside className="detail-panel" aria-label={`Карточка ${object.name}`}>
+  const save = () => {
+    const primary = draft.meters[0] || createDefaultMeter(draft.coords);
+    onSave({ ...draft, notes, meterType: primary.type, meter: primary.nonSplitNumber || primary.splitNumber || 'Не найден', phase: primary.phase === '3ф' ? 'A B C' : primary.phase === '1ф' ? 'A' : draft.phase });
+  };
+  const copyPoleCoords = (index) => updateMeter(index, { ...draft.meters[index], coords: [...(draft.coords || initialKtp.coords)] });
+  return <aside className="detail-panel" aria-label={`Карточка ${object.name}`} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') save(); }}>
     <div className="detail-header"><button className="back-button" type="button" aria-label="Закрыть карточку" title="Закрыть" onClick={onClose}><ArrowLeft size={18} /></button><div><span className="eyebrow">{object.subtitle || 'Контрольный лист'}</span><h2>{object.name}</h2></div><StatusPill status={object.status}>{object.status === 'ok' ? 'Проверено' : object.status === 'warning' ? 'Внимание' : 'Не найдено'}</StatusPill></div>
     <div className="detail-scroll">
-      <div className="object-address"><Route size={16} /><span>{object.subtitle}</span><button type="button" aria-label="Получить моё местоположение" title="Получить GPS" onClick={onLocate}><Navigation size={14} /></button></div>
+      <div className="object-address"><Route size={16} /><span>{object.subtitle}</span><button type="button" aria-label="Получить моё местоположение" title="Получить GPS" onClick={() => onLocate((coords) => updateCoords(coords.join(', ')))}><Navigation size={14} /></button></div>
       {draft.legCount !== draft.schemeLegCount && <div className="warning-banner"><ShieldAlert size={18} /><div><strong>Есть расхождение со схемой</strong><span>На схеме указано {draft.schemeLegCount} ноги, по факту визуально {draft.legCount}</span></div></div>}
-      <div className="detail-section"><div className="section-title-row"><div><h3>Данные осмотра</h3><p>Зафиксируйте значения на опоре</p></div></div><div className="inspection-form"><label>Тип ПУ<select value={draft.meterType || ''} onChange={(event) => update('meterType', event.target.value)}><option value="">Не указан</option><option>НАРТИС-И-300</option><option>Меркурий 234</option><option>СЕ 102</option><option>Не найден</option></select></label><label>Номер ПУ<input value={draft.meter || ''} onChange={(event) => update('meter', event.target.value)} /></label><label>Фазность ввода<div className="segmented"><button type="button" className={draft.phase === 'A B C' ? 'active' : ''} onClick={() => update('phase', 'A B C')}>A B C</button><button type="button" className={draft.phase === 'A' ? 'active' : ''} onClick={() => update('phase', 'A')}>A</button><button type="button" className={draft.phase === 'A B' ? 'active' : ''} onClick={() => update('phase', 'A B')}>A B</button></div></label><label>Сторона дороги<select value={draft.roadSide || ''} onChange={(event) => update('roadSide', event.target.value)}><option>Слева</option><option>Справа</option><option>Не определена</option></select></label><label>Ноги опоры <small className="form-hint">схема: {draft.schemeLegCount}</small><div className="number-input"><button type="button" aria-label="Уменьшить количество ног" onClick={() => update('legCount', Math.max(0, Number(draft.legCount || 0) - 1))}>−</button><strong>{draft.legCount} · факт</strong><button type="button" aria-label="Увеличить количество ног" onClick={() => update('legCount', Number(draft.legCount || 0) + 1)}>+</button></div></label><label>Дом на участке<div className="segmented"><button type="button" className={draft.house ? 'active' : ''} onClick={() => update('house', true)}>Есть</button><button type="button" className={!draft.house ? 'active' : ''} onClick={() => update('house', false)}>Нет</button></div></label><label>Уличный фонарь<select value={draft.lighting || ''} onChange={(event) => update('lighting', event.target.value)}><option>Нет</option><option>От линии</option><option>От уличного</option></select></label><label>Координаты участка<input value={(draft.coords || initialKtp.coords).map((coordinate) => Number(coordinate).toFixed(6)).join(', ')} onChange={(event) => updateCoords(event.target.value)} /></label></div></div>
-      <div className="detail-section"><div className="section-title-row"><div><h3>Чек-лист осмотра</h3><p>Отметьте выполненные проверки</p></div><span className="check-progress">{localChecks.filter((c) => checksState[c.id]).length}/{localChecks.length}</span></div><div className="check-list">{localChecks.map((check) => <button className={`check-row ${checksState[check.id] ? 'checked' : ''}`} key={check.id} onClick={() => toggle(check.id)}><span className="checkbox">{checksState[check.id] && <Check size={13} />}</span><span><strong>{check.label}</strong><small>{check.note}</small></span></button>)}</div></div>
+      <div className="detail-section"><div className="section-title-row"><div><h3>Данные опоры</h3><p>Опора является узлом, к которому можно привязать несколько ПУ</p></div></div><div className="inspection-form"><label>Сторона дороги<select value={draft.roadSide || ''} onChange={(event) => update('roadSide', event.target.value)}><option>Слева</option><option>Справа</option><option>Не определена</option></select></label><label>Ноги опоры <small className="form-hint">схема: {draft.schemeLegCount}</small><div className="number-input"><button type="button" aria-label="Уменьшить количество ног" onClick={() => update('legCount', Math.max(0, Number(draft.legCount || 0) - 1))}>−</button><strong>{draft.legCount} · факт</strong><button type="button" aria-label="Увеличить количество ног" onClick={() => update('legCount', Number(draft.legCount || 0) + 1)}>+</button></div></label><label>Дом на участке<div className="segmented"><button type="button" className={draft.house ? 'active' : ''} onClick={() => update('house', true)}>Есть</button><button type="button" className={!draft.house ? 'active' : ''} onClick={() => update('house', false)}>Нет</button></div></label><label>Уличный фонарь<select value={draft.lighting || ''} onChange={(event) => update('lighting', event.target.value)}><option>Нет</option><option>От линии</option><option>От уличного</option></select></label><label>Координаты опоры<input value={(draft.coords || initialKtp.coords).map((coordinate) => Number(coordinate).toFixed(6)).join(', ')} onChange={(event) => updateCoords(event.target.value)} /></label></div></div>
+      <div className="detail-section"><div className="section-title-row"><div><h3>ПУ на опоре <span className="inline-count">{draft.meters.length}</span></h3><p>Выберите шаблон, продиктуйте номер и сохраните</p></div><button className="edit-button" type="button" onClick={addMeter}><Plus size={14} /> Добавить ПУ</button></div><div className="meter-list">{draft.meters.map((meter, index) => <MeterCard key={meter.id} meter={meter} index={index} onChange={(value) => updateMeter(index, value)} onCopyCoords={() => copyPoleCoords(index)} onRemove={() => removeMeter(index)} />)}{!draft.meters.length && <div className="empty-tree">На опоре пока нет ПУ. Добавьте прибор, чтобы он попал в экспорт.</div>}</div></div>
+      <div className="detail-section"><div className="section-title-row"><div><h3>Чек-лист осмотра</h3><p>Отметьте выполненные проверки</p></div><span className="check-progress">{localChecks.filter((c) => checksState[c.id]).length}/{localChecks.length}</span></div><div className="check-list">{localChecks.map((check) => <button type="button" className={`check-row ${checksState[check.id] ? 'checked' : ''}`} key={check.id} onClick={() => toggle(check.id)}><span className="checkbox">{checksState[check.id] && <Check size={13} />}</span><span><strong>{check.label}</strong><small>{check.note}</small></span></button>)}</div></div>
       <PhotoStrip photos={photos} onAdd={addPhoto} inputRef={photoInputRef} />
-      <div className="detail-section"><div className="section-title-row"><div><h3>Примечание</h3><p>Зафиксируйте детали и замечания</p></div></div><textarea placeholder="Например: кабельный ввод со стороны дома, пломба целая..." value={notes} onChange={(event) => setNotes(event.target.value)} /></div>
+      <div className="detail-section"><div className="section-title-row"><div><h3>Примечание</h3><p>Можно продиктовать замечание голосом</p></div><SpeechInputButton onResult={(text) => setNotes((current) => current ? `${current} ${text}` : text)} /></div><textarea placeholder="Например: кабельный ввод со стороны дома, пломба целая..." value={notes} onChange={(event) => setNotes(event.target.value)} /></div>
     </div>
-    <div className="panel-footer"><button className="secondary-button" type="button" onClick={() => photoInputRef.current?.click()}><Camera size={16} /> Фото</button><button className="primary-button" type="button" onClick={() => onSave({ ...draft, notes })}><Check size={16} /> Сохранить опору</button></div>
+    <div className="panel-footer"><button className="secondary-button" type="button" onClick={() => photoInputRef.current?.click()}><Camera size={16} /> Фото</button><button className="primary-button" type="button" onClick={() => save()}><Check size={16} /> Сохранить опору</button></div>
   </aside>;
 }
 
 function FeederPanel({ feeder, poles, onClose, onSelect }) {
   const feederCode = getFeederCode(feeder.name);
-  const feederPoles = poles.filter((pole) => getFeederCode(pole.subtitle) === feederCode);
+  const feederPoles = poles.filter((pole) => pole.feederId === feeder.id || getFeederCode(pole.subtitle) === feederCode);
   return <aside className="detail-panel" aria-label={`Карточка ${feeder.name}`}>
     <div className="detail-header"><button className="back-button" type="button" aria-label="Закрыть карточку" title="Закрыть" onClick={onClose}><ArrowLeft size={18} /></button><div><span className="eyebrow">Карточка фидера</span><h2>{feeder.name}</h2></div><StatusPill status={feeder.status}>{feeder.progress}% обследовано</StatusPill></div>
-    <div className="detail-scroll"><div className="object-address"><Route size={16} /><span>{feeder.subtitle}</span></div><div className="progress-card"><div className="progress-heading"><div><span>Готовность линии</span><strong>{feeder.progress}%</strong></div><StatusPill status={feeder.status}>Полевое обследование</StatusPill></div><div className="progress-track"><div style={{ width: `${feeder.progress}%` }} /></div><p><Check size={14} /> {feederPoles.length} опор привязано к фидеру</p></div><div className="detail-section"><div className="section-title-row"><div><h3>Опоры на линии</h3><p>Откройте карточку для подробной проверки</p></div></div><div className="check-list">{feederPoles.length ? feederPoles.map((pole) => <button className="check-row" type="button" key={pole.id} onClick={() => onSelect(pole.id)}><span className={`object-icon pole ${pole.status}`}><RadioTower size={15} /></span><span><strong>{pole.name}</strong><small>{pole.meterType} · {pole.meter}</small></span><ChevronDown size={14} /></button>) : <div className="empty-tree">На фидере пока нет опор.</div>}</div></div></div>
+    <div className="detail-scroll"><div className="object-address"><Route size={16} /><span>{feeder.subtitle}</span></div><div className="progress-card"><div className="progress-heading"><div><span>Готовность линии</span><strong>{feeder.progress}%</strong></div><StatusPill status={feeder.status}>Полевое обследование</StatusPill></div><div className="progress-track"><div style={{ width: `${feeder.progress}%` }} /></div><p><Check size={14} /> {feederPoles.length} опор · {feederPoles.reduce((sum, pole) => sum + getMetersForPole(pole).length, 0)} ПУ</p></div><div className="detail-section"><div className="section-title-row"><div><h3>Опоры на линии</h3><p>Откройте карточку для подробной проверки</p></div></div><div className="check-list">{feederPoles.length ? feederPoles.map((pole) => <PoleTreeNode key={pole.id} pole={pole} onSelect={onSelect} />) : <div className="empty-tree">На фидере пока нет опор.</div>}</div></div></div>
     <div className="panel-footer"><button className="primary-button" type="button" onClick={onClose}>Закрыть</button></div>
   </aside>;
 }
 
-function Field({ label, value, onChange, type = 'text', placeholder }) {
-  return <label className="builder-field"><span>{label}</span><input type={type} value={value ?? ''} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></label>;
+function PoleTreeNode({ pole, onSelect }) {
+  return <div className="check-row pole-tree-row" role="button" tabIndex={0} onClick={() => onSelect(pole.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onSelect(pole.id); }}><span className={`object-icon pole ${pole.status}`}><RadioTower size={15} /></span><span className="pole-tree-copy"><strong>{pole.name}</strong><small>{getMetersForPole(pole).length} ПУ · {pole.house ? 'дом есть' : 'участок без дома'}</small><span className="tree-meter-list">{getMetersForPole(pole).map((meter) => <i key={meter.id}>{meter.type || 'ПУ'} · {meter.splitNumber || meter.nonSplitNumber || 'номер не указан'}</i>)}</span></span><ChevronDown size={14} /></div>;
+}
+
+function Field({ label, value, onChange, type = 'text', inputMode, placeholder, voice = false, voiceMode = 'text' }) {
+  const handleVoice = (transcript) => {
+    const next = voiceMode === 'number' ? normalizeVoiceDigits(transcript) : transcript;
+    if (next) onChange(next);
+  };
+  return <label className="builder-field"><span>{label}</span><div className="field-control"><input type={type} inputMode={inputMode} value={value ?? ''} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />{voice && <SpeechInputButton onResult={handleVoice} />}</div></label>;
 }
 
 function ProjectBuilderPanel({ project, objects, onSave, onClose }) {
   const [draft, setDraft] = useState(() => ({ ...project, ktp: { ...project.ktp } }));
-  const [draftObjects, setDraftObjects] = useState(() => objects.map((object) => ({ ...object })));
+  const [draftObjects, setDraftObjects] = useState(() => normalizeObjects(objects).map((object) => ({ ...object })));
   const feeders = draftObjects.filter((object) => object.type === 'feeder');
   const poles = draftObjects.filter((object) => object.type === 'pole');
   const updateProject = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
   const updateKtp = (key, value) => setDraft((current) => ({ ...current, ktp: { ...current.ktp, [key]: value } }));
   const updateObject = (id, key, value) => setDraftObjects((current) => current.map((object) => object.id === id ? { ...object, [key]: value } : object));
+  const updatePoleFeeder = (poleId, feederId) => setDraftObjects((current) => current.map((object) => {
+    if (object.id !== poleId) return object;
+    const feeder = feeders.find((item) => item.id === feederId);
+    return { ...object, feederId, subtitle: `${feeder?.name || 'Фидер'} · ${object.name || 'опора'}` };
+  }));
+  const updateMeter = (poleId, meterIndex, value) => setDraftObjects((current) => current.map((object) => object.id === poleId ? { ...object, meters: getMetersForPole(object).map((meter, index) => index === meterIndex ? value : meter) } : object));
+  const addMeter = (poleId) => setDraftObjects((current) => current.map((object) => object.id === poleId ? { ...object, meters: [...getMetersForPole(object), createDefaultMeter(object.coords)] } : object));
+  const removeMeter = (poleId, meterIndex) => setDraftObjects((current) => current.map((object) => object.id === poleId ? { ...object, meters: getMetersForPole(object).filter((_, index) => index !== meterIndex) } : object));
   const addFeeder = () => setDraftObjects((current) => [...current, { id: `f-${Date.now()}`, type: 'feeder', name: `Фидер Ф-${current.filter((item) => item.type === 'feeder').length + 1}`, subtitle: 'Новая линия · 0,4 кВ', status: 'muted', progress: 0, coords: draft.ktp.coords }]);
-  const addPole = () => setDraftObjects((current) => [...current, { id: `p-${Date.now()}`, type: 'pole', name: `Опора № ${current.filter((item) => item.type === 'pole').length + 1}`, subtitle: `${feeders[0]?.name || 'Фидер Ф-1'} · новая опора`, status: 'muted', progress: 0, coords: draft.ktp.coords, legCount: 2, schemeLegCount: 2, meterType: 'Не проверен', meter: 'Не проверен', phase: 'A B C', house: false, lighting: 'Нет', roadSide: 'Не определена' }]);
+  const addPole = () => setDraftObjects((current) => [...current, { id: `p-${Date.now()}`, type: 'pole', feederId: feeders[0]?.id || '', name: `Опора № ${current.filter((item) => item.type === 'pole').length + 1}`, subtitle: `${feeders[0]?.name || 'Фидер Ф-1'} · новая опора`, status: 'muted', progress: 0, coords: [...draft.ktp.coords], legCount: 2, schemeLegCount: 2, meterType: 'Не проверен', meter: 'Не проверен', phase: 'A B C', house: false, lighting: 'Нет', roadSide: 'Не определена', meters: [createDefaultMeter(draft.ktp.coords)] }]);
   const removeObject = (id) => setDraftObjects((current) => current.filter((object) => object.id !== id));
   const save = () => onSave({ ...draft, ktp: { ...draft.ktp, feederCount: feeders.length } }, draftObjects);
   return <aside className="detail-panel builder-panel">
@@ -431,9 +718,8 @@ function ProjectBuilderPanel({ project, objects, onSave, onClose }) {
     <div className="detail-scroll builder-scroll">
       <div className="builder-intro"><Building2 size={20} /><div><strong>Полная схема населённого пункта</strong><span>Заполните исходные данные, а «Контур» построит структуру КТП → фидеры → опоры → ПУ.</span></div></div>
       <div className="detail-section"><div className="section-title-row"><div><h3>1. Населённый пункт</h3><p>Общие данные обследования</p></div></div><div className="builder-grid"><Field label="Населённый пункт" value={draft.settlement} onChange={(value) => updateProject('settlement', value)} /><Field label="Район" value={draft.district} onChange={(value) => updateProject('district', value)} /><Field label="Субъект РФ" value={draft.region} onChange={(value) => updateProject('region', value)} /><Field label="Дата обследования" type="date" value={draft.surveyDate} onChange={(value) => updateProject('surveyDate', value)} /></div><label className="builder-field full"><span>Примечание по маршруту</span><textarea value={draft.notes || ''} onChange={(event) => updateProject('notes', event.target.value)} /></label></div>
-      <div className="detail-section"><div className="section-title-row"><div><h3>2. КТП</h3><p>Паспортная информация</p></div></div><div className="builder-grid"><Field label="Наименование / номер" value={draft.ktp.name} onChange={(value) => updateKtp('name', value)} /><Field label="Адрес / ориентир" value={draft.ktp.address} onChange={(value) => updateKtp('address', value)} /><Field label="Трансформатор" value={draft.ktp.transformer} onChange={(value) => updateKtp('transformer', value)} /><Field label="Мощность, кВА" value={draft.ktp.kva} onChange={(value) => updateKtp('kva', value)} /><Field label="Номер ПУ КТП" value={draft.ktp.meter} onChange={(value) => updateKtp('meter', value)} /><Field label="ТТ и коэффициент" value={`${draft.ktp.tt || ''} · ${draft.ktp.ratio || ''}`} onChange={(value) => { const [tt, ratio] = value.split('·').map((item) => item.trim()); updateKtp('tt', tt); updateKtp('ratio', ratio); }} /><Field label="ПУ уличного освещения" value={draft.ktp.lightingMeter} onChange={(value) => updateKtp('lightingMeter', value)} /></div></div>
       <div className="detail-section"><div className="section-title-row"><div><h3>3. Фидеры</h3><p>Все отходящие линии КТП</p></div><button className="edit-button" onClick={addFeeder}><Plus size={14} /> Добавить</button></div><div className="builder-list">{feeders.map((feeder, index) => <div className="builder-row" key={feeder.id}><div className="builder-row-title"><strong>{index + 1}. {feeder.name}</strong><button className="remove-button" onClick={() => removeObject(feeder.id)}><X size={13} /></button></div><div className="builder-grid"><Field label="Название фидера" value={feeder.name} onChange={(value) => updateObject(feeder.id, 'name', value)} /><Field label="Описание / направление" value={feeder.subtitle} onChange={(value) => updateObject(feeder.id, 'subtitle', value)} /></div></div>)}</div></div>
-      <div className="detail-section"><div className="section-title-row"><div><h3>4. Опоры, участки и ПУ</h3><p>Одна строка — один фактический объект на линии</p></div><button className="edit-button" onClick={addPole}><Plus size={14} /> Добавить</button></div><div className="builder-list">{poles.map((pole, index) => <div className="builder-row" key={pole.id}><div className="builder-row-title"><strong>{index + 1}. {pole.name}</strong><button className="remove-button" onClick={() => removeObject(pole.id)}><X size={13} /></button></div><div className="builder-grid"><Field label="Номер опоры" value={pole.name} onChange={(value) => updateObject(pole.id, 'name', value)} /><Field label="Фидер" value={pole.subtitle} onChange={(value) => updateObject(pole.id, 'subtitle', value)} /><Field label="Тип ПУ" value={pole.meterType} onChange={(value) => updateObject(pole.id, 'meterType', value)} /><Field label="Номер ПУ" value={pole.meter} onChange={(value) => updateObject(pole.id, 'meter', value)} /><Field label="Ноги: факт / схема" value={`${pole.legCount} / ${pole.schemeLegCount}`} onChange={(value) => { const [fact, scheme] = value.split('/').map((item) => Number(item.trim())); updateObject(pole.id, 'legCount', fact || 0); updateObject(pole.id, 'schemeLegCount', scheme || 0); }} /><Field label="Фазность" value={pole.phase} onChange={(value) => updateObject(pole.id, 'phase', value)} /><Field label="Сторона дороги" value={pole.roadSide} onChange={(value) => updateObject(pole.id, 'roadSide', value)} /><Field label="Фонарь" value={pole.lighting} onChange={(value) => updateObject(pole.id, 'lighting', value)} /><Field label="Координаты" value={pole.coords?.join(', ')} onChange={(value) => updateObject(pole.id, 'coords', value.split(',').map((item) => Number(item.trim())))} /><label className="builder-field"><span>Дом / ввод на участке</span><select value={pole.house ? 'Есть' : 'Нет'} onChange={(event) => updateObject(pole.id, 'house', event.target.value === 'Есть')}><option>Есть</option><option>Нет</option></select></label></div></div>)}</div></div>
+      <div className="detail-section"><div className="section-title-row"><div><h3>4. Опоры, участки и ПУ</h3><p>У каждой опоры может быть один или несколько приборов учета</p></div><button className="edit-button" type="button" onClick={addPole}><Plus size={14} /> Добавить опору</button></div><div className="builder-list">{poles.map((pole, index) => <div className="builder-row pole-builder-row" key={pole.id}><div className="builder-row-title"><strong>{index + 1}. {pole.name}</strong><span className="tree-badge">{getMetersForPole(pole).length} ПУ</span><button className="remove-button" type="button" onClick={() => removeObject(pole.id)} title="Удалить опору"><X size={13} /></button></div><div className="builder-grid"><Field label="Номер опоры" value={pole.name} onChange={(value) => updateObject(pole.id, 'name', value)} /><label className="builder-field"><span>Фидер</span><select value={pole.feederId || ''} onChange={(event) => updatePoleFeeder(pole.id, event.target.value)}><option value="">Не привязан</option>{feeders.map((feeder) => <option key={feeder.id} value={feeder.id}>{feeder.name}</option>)}</select></label><Field label="Ноги: факт / схема" value={`${pole.legCount} / ${pole.schemeLegCount}`} onChange={(value) => { const [fact, scheme] = value.split('/').map((item) => Number(item.trim())); updateObject(pole.id, 'legCount', fact || 0); updateObject(pole.id, 'schemeLegCount', scheme || 0); }} /><Field label="Сторона дороги" value={pole.roadSide} onChange={(value) => updateObject(pole.id, 'roadSide', value)} /><Field label="Координаты опоры" value={pole.coords?.join(', ')} onChange={(value) => updateObject(pole.id, 'coords', value.split(',').map((item) => Number(item.trim())))} /><label className="builder-field"><span>Дом / ввод на участке</span><select value={pole.house ? 'Есть' : 'Нет'} onChange={(event) => updateObject(pole.id, 'house', event.target.value === 'Есть')}><option>Есть</option><option>Нет</option></select></label></div><div className="nested-meter-block"><div className="nested-meter-heading"><div><strong>ПУ на опоре</strong><span>Заполняется отдельно для каждого прибора</span></div><button className="edit-button" type="button" onClick={() => addMeter(pole.id)}><Plus size={13} /> Добавить ПУ</button></div>{getMetersForPole(pole).map((meter, meterIndex) => <MeterCard compact key={meter.id} meter={meter} index={meterIndex} onChange={(value) => updateMeter(pole.id, meterIndex, value)} onCopyCoords={() => updateMeter(pole.id, meterIndex, { ...meter, coords: [...pole.coords] })} onRemove={() => removeMeter(pole.id, meterIndex)} />)}</div></div>)}</div></div>
     </div>
     <div className="panel-footer"><button className="secondary-button" onClick={onClose}>Отмена</button><button className="primary-button" onClick={save}><Save size={16} /> Сохранить локально</button></div>
   </aside>;
@@ -442,7 +728,7 @@ function ProjectBuilderPanel({ project, objects, onSave, onClose }) {
 function SettlementSchemePanel({ project, objects, onClose, onSelect }) {
   const feeders = objects.filter((object) => object.type === 'feeder');
   const poles = objects.filter((object) => object.type === 'pole');
-  return <aside className="detail-panel scheme-panel"><div className="detail-header"><button className="back-button" onClick={onClose}><ArrowLeft size={18} /></button><div><span className="eyebrow">Структурированная схема</span><h2>{project.settlement}</h2></div><GitBranch size={18} className="builder-save-icon" /></div><div className="detail-scroll"><div className="scheme-summary"><div><strong>{project.ktp.name}</strong><span>{project.ktp.transformer} · {project.ktp.kva}</span></div><div className="scheme-stats"><span><b>{feeders.length}</b> фидера</span><span><b>{poles.length}</b> опор</span></div></div><div className="scheme-tree"><div className="tree-root"><Zap size={15} /> {project.ktp.name}<small>{project.ktp.address}</small></div>{feeders.map((feeder) => { const feederKey = feeder.name.replace(/^Фидер\s*/i, '').trim(); const feederPoles = poles.filter((pole) => pole.subtitle?.startsWith(feederKey)); return <div className="tree-feeder" key={feeder.id}><div className="tree-feeder-title"><Route size={15} /><strong>{feeder.name}</strong><span>{feeder.subtitle}</span></div><div className="tree-poles">{feederPoles.map((pole) => <button key={pole.id} className="tree-pole" onClick={() => onSelect(pole.id)}><RadioTower size={14} /><span><strong>{pole.name}</strong><small>{pole.meterType} · {pole.meter}</small></span><StatusPill status={pole.status}>{pole.house ? 'Дом' : 'Пусто'}</StatusPill></button>)}{feederPoles.length === 0 && <div className="empty-tree">Опоры ещё не привязаны к этому фидеру</div>}</div></div>; })}</div><div className="detail-section scheme-checks"><h3>Автоматические расхождения</h3><p>Система подсвечивает места, где фактические данные не совпадают с исходной схемой.</p>{poles.filter((pole) => pole.legCount !== pole.schemeLegCount || pole.meter === 'Не найден' || pole.meterType === 'Не найден').map((pole) => <button key={pole.id} onClick={() => onSelect(pole.id)}><AlertTriangle size={14} /><span>{pole.name}: требуется проверка</span></button>)}{poles.every((pole) => pole.legCount === pole.schemeLegCount && pole.meter !== 'Не найден' && pole.meterType !== 'Не найден') && <div className="empty-tree">Расхождений по введённым данным нет.</div>}</div></div><div className="panel-footer"><button className="primary-button" onClick={onClose}>Вернуться к карте</button></div></aside>;
+  return <aside className="detail-panel scheme-panel"><div className="detail-header"><button className="back-button" type="button" onClick={onClose}><ArrowLeft size={18} /></button><div><span className="eyebrow">Структурированная схема</span><h2>{project.settlement}</h2></div><GitBranch size={18} className="builder-save-icon" /></div><div className="detail-scroll"><div className="scheme-summary"><div><strong>{project.ktp.name}</strong><span>{project.ktp.transformer} · {project.ktp.kva}</span></div><div className="scheme-stats"><span><b>{feeders.length}</b> фидера</span><span><b>{poles.length}</b> опор</span><span><b>{poles.reduce((sum, pole) => sum + getMetersForPole(pole).length, 0)}</b> ПУ</span></div></div><div className="scheme-tree"><div className="tree-root"><Zap size={15} /> {project.ktp.name}<small>{project.ktp.address}</small></div>{feeders.map((feeder) => { const feederPoles = poles.filter((pole) => pole.feederId === feeder.id || getFeederCode(pole.subtitle || '') === getFeederCode(feeder.name)); return <div className="tree-feeder" key={feeder.id}><div className="tree-feeder-title"><Route size={15} /><strong>{feeder.name}</strong><span>{feeder.subtitle}</span></div><div className="tree-poles">{feederPoles.map((pole) => <PoleTreeNode key={pole.id} pole={pole} onSelect={onSelect} />)}{feederPoles.length === 0 && <div className="empty-tree">Опоры ещё не привязаны к этому фидеру</div>}</div></div>; })}</div><div className="detail-section scheme-checks"><h3>Автоматические расхождения</h3><p>Система подсвечивает места, где фактические данные не совпадают с исходной схемой.</p>{poles.filter((pole) => pole.legCount !== pole.schemeLegCount || getMetersForPole(pole).some((meter) => !meter.splitNumber && !meter.nonSplitNumber)).map((pole) => <button type="button" key={pole.id} onClick={() => onSelect(pole.id)}><AlertTriangle size={14} /><span>{pole.name}: требуется проверка</span></button>)}{poles.every((pole) => pole.legCount === pole.schemeLegCount && getMetersForPole(pole).every((meter) => meter.splitNumber || meter.nonSplitNumber)) && <div className="empty-tree">Расхождений по введённым данным нет.</div>}</div></div><div className="panel-footer"><button className="primary-button" type="button" onClick={onClose}>Вернуться к карте</button></div></aside>;
 }
 
 const diagramTypeLabels = {
@@ -477,7 +763,7 @@ function buildDiagram(project, objects) {
 
   feeders.forEach((feeder, feederIndex) => {
     const code = getFeederCode(feeder.name);
-    const feederPoles = poles.filter((pole) => getFeederCode(pole.subtitle) === code);
+    const feederPoles = poles.filter((pole) => pole.feederId === feeder.id || getFeederCode(pole.subtitle) === code);
     const baseX = laneX[feederIndex % laneX.length];
     const baseY = 485 - Math.floor(feederIndex / laneX.length) * 92;
     let previous = 'diagram-transformer';
@@ -490,8 +776,9 @@ function buildDiagram(project, objects) {
       previous = poleId;
       const houseId = `diagram-house-${pole.id}`;
       const meterId = `diagram-meter-${pole.id}`;
+      const primaryMeter = getMetersForPole(pole)[0];
       nodes.push(getSchemeNode(houseId, 'house', x + (poleIndex % 2 === 0 ? 68 : -68), y - 13, pole.house ? `Участок ${pole.name.replace(/\D/g, '')}` : 'Пустой участок', pole.roadSide || '', { color: pole.house ? '#111827' : '#9aa5b3', objectId: pole.id, muted: !pole.house }));
-      nodes.push(getSchemeNode(meterId, 'meter', x + (poleIndex % 2 === 0 ? 68 : -68), y + 29, pole.meterType || 'ПУ', pole.meter || 'Не найден', { color: pole.meter === 'Не найден' ? '#dc2626' : '#111827', objectId: pole.id }));
+      nodes.push(getSchemeNode(meterId, 'meter', x + (poleIndex % 2 === 0 ? 68 : -68), y + 29, primaryMeter?.type || pole.meterType || 'ПУ', primaryMeter?.nonSplitNumber || primaryMeter?.splitNumber || pole.meter || 'Не найден', { color: primaryMeter?.nonSplitNumber || primaryMeter?.splitNumber || pole.meter !== 'Не найден' ? '#111827' : '#dc2626', objectId: pole.id }));
       edges.push({ id: `edge-${poleId}-${houseId}`, from: poleId, to: houseId, label: pole.phase || '', color: '#111827' });
       edges.push({ id: `edge-${poleId}-${meterId}`, from: poleId, to: meterId, label: '', color: '#111827', dashed: true });
       if (pole.lighting && pole.lighting !== 'Нет') {
@@ -536,6 +823,7 @@ function DiagramEditorPanel({ project, objects, diagram, onSave, onClose }) {
   const [linkMode, setLinkMode] = useState(false);
   const [linkFrom, setLinkFrom] = useState(null);
   const svgRef = useRef(null);
+  const dragFrameRef = useRef(null);
   const nodesById = useMemo(() => Object.fromEntries(draft.nodes.map((node) => [node.id, node])), [draft.nodes]);
   const selectedNode = nodesById[selectedId];
   const pointFromEvent = (event) => {
@@ -553,9 +841,19 @@ function DiagramEditorPanel({ project, objects, diagram, onSave, onClose }) {
   const moveDrag = (event) => {
     if (!drag) return;
     const point = pointFromEvent(event);
-    updateNode(drag.id, { x: Math.max(35, Math.min(1165, point.x + drag.dx)), y: Math.max(35, Math.min(725, point.y + drag.dy)) });
+    if (dragFrameRef.current) return;
+    dragFrameRef.current = window.requestAnimationFrame(() => {
+      updateNode(drag.id, { x: Math.max(35, Math.min(1165, point.x + drag.dx)), y: Math.max(35, Math.min(725, point.y + drag.dy)) });
+      dragFrameRef.current = null;
+    });
   };
-  const endDrag = () => setDrag(null);
+  const endDrag = () => {
+    if (dragFrameRef.current) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+    setDrag(null);
+  };
   const selectNode = (id) => {
     if (linkMode) {
       if (!linkFrom) { setLinkFrom(id); setSelectedId(id); return; }
@@ -616,6 +914,7 @@ function tpStatusLabel(status) {
 function TPRegistryWorkspace({
   records,
   search,
+  searchInput = search,
   onSearch,
   statusFilter,
   onStatusFilter,
@@ -628,12 +927,18 @@ function TPRegistryWorkspace({
   onImport,
   onReloadSource,
   onExport,
+  onExportExcel,
   onOpenProject,
   loading,
 }) {
   const [draft, setDraft] = useState(null);
   const selected = records.find((record) => record.id === selectedId) || null;
-  const statuses = [...new Set(records.map((record) => record.status).filter(Boolean))];
+  const statuses = useMemo(() => [...new Set(records.map((record) => record.status).filter(Boolean))], [records]);
+  const registryStats = useMemo(() => ({
+    withCoords: records.reduce((count, record) => count + (Number.isFinite(record.lat) && Number.isFinite(record.lon) ? 1 : 0), 0),
+    surveyed: records.reduce((count, record) => count + (record.surveyState === 'Обследована' ? 1 : 0), 0),
+    issues: records.reduce((count, record) => count + (record.surveyState === 'Есть замечания' ? 1 : 0), 0),
+  }), [records]);
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return records.filter((record) => {
@@ -660,24 +965,25 @@ function TPRegistryWorkspace({
       <div><div className="breadcrumbs"><span>Справочники</span><i>/</i><strong>Реестр ТП</strong></div><h1>База трансформаторных подстанций</h1><p>Все объекты из RossetiIMDS доступны локально: поиск, фильтры, карточка и данные обследования.</p></div>
       <div className="registry-actions">
         <button className="outline-button" type="button" onClick={onExport}><Download size={15} /> Экспорт базы</button>
+        <button className="outline-button" type="button" onClick={onExportExcel}><FileSpreadsheet size={15} /> Excel проекта</button>
         <label className="outline-button file-button"><FileUp size={15} /> Импорт map.html<input type="file" accept=".html,.htm,.json,application/json,text/html" onChange={onImport} /></label>
         <button className="primary-button compact" type="button" onClick={onCreate}><Plus size={15} /> Добавить ТП</button>
       </div>
     </div>
     <div className="registry-stats">
       <div><Database size={17} /><strong>{records.length.toLocaleString('ru-RU')}</strong><span>объектов в локальной базе</span></div>
-      <div><MapPin size={17} /><strong>{records.filter((record) => Number.isFinite(record.lat) && Number.isFinite(record.lon)).length.toLocaleString('ru-RU')}</strong><span>с координатами</span></div>
-      <div><ClipboardCheck size={17} /><strong>{records.filter((record) => record.surveyState === 'Обследована').length.toLocaleString('ru-RU')}</strong><span>обследовано</span></div>
-      <div><ShieldAlert size={17} /><strong>{records.filter((record) => record.surveyState === 'Есть замечания').length.toLocaleString('ru-RU')}</strong><span>с замечаниями</span></div>
+      <div><MapPin size={17} /><strong>{registryStats.withCoords.toLocaleString('ru-RU')}</strong><span>с координатами</span></div>
+      <div><ClipboardCheck size={17} /><strong>{registryStats.surveyed.toLocaleString('ru-RU')}</strong><span>обследовано</span></div>
+      <div><ShieldAlert size={17} /><strong>{registryStats.issues.toLocaleString('ru-RU')}</strong><span>с замечаниями</span></div>
     </div>
     <div className="registry-grid">
       <div className="registry-list-card">
-        <div className="registry-list-toolbar"><div className="search-field"><Search size={16} /><input aria-label="Поиск по реестру ТП" placeholder="Поиск по ID, названию, статусу, ПУ" value={search} onChange={(event) => onSearch(event.target.value)} /><kbd>/</kbd></div><div className="registry-filter-row"><select value={statusFilter} onChange={(event) => onStatusFilter(event.target.value)} aria-label="Фильтр по статусу"><option value="all">Все статусы</option>{statuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><select value={surveyFilter} onChange={(event) => onSurveyFilter(event.target.value)} aria-label="Фильтр по обследованию"><option value="all">Любое обследование</option><option>Не обследована</option><option>В работе</option><option>Обследована</option><option>Есть замечания</option></select></div></div>
+        <div className="registry-list-toolbar"><div className="search-field"><Search size={16} /><input aria-label="Поиск по реестру ТП" placeholder="Поиск по ID, названию, статусу, ПУ" value={searchInput} onChange={(event) => onSearch(event.target.value)} /><kbd>/</kbd></div><div className="registry-filter-row"><select value={statusFilter} onChange={(event) => onStatusFilter(event.target.value)} aria-label="Фильтр по статусу"><option value="all">Все статусы</option>{statuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><select value={surveyFilter} onChange={(event) => onSurveyFilter(event.target.value)} aria-label="Фильтр по обследованию"><option value="all">Любое обследование</option><option>Не обследована</option><option>В работе</option><option>Обследована</option><option>Есть замечания</option></select></div></div>
         <div className="registry-list-meta"><span>{loading ? 'Загрузка исходного реестра…' : `Найдено: ${filtered.length.toLocaleString('ru-RU')}`}</span><button type="button" onClick={onReloadSource} title="Повторно загрузить исходный map.html"><RefreshCw size={14} /> Обновить источник</button></div>
         <div className="registry-list">
-          {filtered.slice(0, 250).map((record) => <button type="button" key={record.id} className={`registry-row ${record.id === selectedId ? 'selected' : ''}`} onClick={() => onSelect(record.id)}><div className={`registry-type ${TP_STATUS_META[record.status]?.tone || 'muted'}`}>{record.type || 'ТП'}</div><div className="registry-copy"><strong>{record.name}</strong><span>{record.id} · {formatCoords(record)}</span></div><div className="registry-row-end"><StatusPill status={TP_STATUS_META[record.status]?.tone || 'muted'}>{record.status}</StatusPill><small>{record.surveyState}</small></div></button>)}
+          {filtered.slice(0, 120).map((record) => <button type="button" key={record.id} className={`registry-row ${record.id === selectedId ? 'selected' : ''}`} onClick={() => onSelect(record.id)}><div className={`registry-type ${TP_STATUS_META[record.status]?.tone || 'muted'}`}>{record.type || 'ТП'}</div><div className="registry-copy"><strong>{record.name}</strong><span>{record.id} · {formatCoords(record)}</span></div><div className="registry-row-end"><StatusPill status={TP_STATUS_META[record.status]?.tone || 'muted'}>{record.status}</StatusPill><small>{record.surveyState}</small></div></button>)}
           {!filtered.length && <div className="registry-empty"><SearchX size={22} /><strong>Ничего не найдено</strong><span>Измените запрос или сбросьте фильтры.</span></div>}
-          {filtered.length > 250 && <div className="registry-more">Показаны первые 250 объектов. Уточните поиск, чтобы быстро найти нужную ТП.</div>}
+          {filtered.length > 120 && <div className="registry-more">Показаны первые 120 объектов. Уточните поиск, чтобы быстро найти нужную ТП.</div>}
         </div>
       </div>
       <aside className="registry-editor">
@@ -744,18 +1050,20 @@ function App() {
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [gps, setGps] = useState(null);
   const [tpRegistry, setTpRegistry] = useState(() => readLocalTpRegistry());
-  const [tpRegistryLoading, setTpRegistryLoading] = useState(() => readLocalTpRegistry().length === 0);
+  const [tpRegistryLoading, setTpRegistryLoading] = useState(() => !localStorage.getItem(TP_REGISTRY_KEY));
   const [registrySearch, setRegistrySearch] = useState('');
   const [registryStatusFilter, setRegistryStatusFilter] = useState('all');
   const [registrySurveyFilter, setRegistrySurveyFilter] = useState('all');
   const [selectedTpId, setSelectedTpId] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(() => localStorage.getItem(ONBOARDING_KEY) !== '1');
   const selected = objects.find((object) => object.id === selectedId);
-  const filtered = objects.filter((object) => {
-    const matchesSearch = `${object.name} ${object.subtitle} ${object.meter || ''}`.toLowerCase().includes(search.toLowerCase());
+  const deferredSearch = useDeferredValue(search);
+  const deferredRegistrySearch = useDeferredValue(registrySearch);
+  const filtered = useMemo(() => objects.filter((object) => {
+    const matchesSearch = `${object.name} ${object.subtitle} ${object.meter || ''} ${getMetersForPole(object).map((meter) => `${meter.splitNumber} ${meter.nonSplitNumber}`).join(' ')}`.toLowerCase().includes(deferredSearch.toLowerCase());
     const hasIssue = object.type === 'pole' && (object.status === 'warning' || object.status === 'danger' || object.legCount !== object.schemeLegCount || object.meter === 'Не найден');
     return matchesSearch && (!showOnlyIssues || hasIssue);
-  });
+  }), [objects, deferredSearch, showOnlyIssues]);
   const totalChecked = Object.values(checksState).filter(Boolean).length;
 
   useEffect(() => {
@@ -799,6 +1107,10 @@ function App() {
         event.preventDefault();
         document.querySelector('.search-field input, .map-search input')?.focus();
       }
+      if (event.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+        event.preventDefault();
+        document.querySelector('.search-field input, .map-search input')?.focus();
+      }
       if (event.key === 'Escape') {
         setOpenPanel(null);
         setShowMobileNav(false);
@@ -818,16 +1130,24 @@ function App() {
     else setOpenPanel(null);
   };
   const selectObject = (id) => { setSelectedId(id); setSelectedTab('objects'); setOpenPanel('object'); setShowMobileNav(false); };
-  const locate = () => {
+  const locate = (onSuccess) => {
     if (!navigator.geolocation) {
       window.alert('Геолокация недоступна в этом браузере.');
       return;
     }
-    navigator.geolocation.getCurrentPosition((position) => setGps([position.coords.latitude, position.coords.longitude]), () => window.alert('Не удалось получить GPS-позицию. Разрешите доступ к геолокации.'));
+    navigator.geolocation.getCurrentPosition((position) => {
+      const coords = [position.coords.latitude, position.coords.longitude];
+      setGps(coords);
+      onSuccess?.(coords);
+    }, () => window.alert('Не удалось получить GPS-позицию. Разрешите доступ к геолокации.'));
   };
   const exportData = () => {
     const payload = { exportedAt: new Date().toISOString(), project, ktp: project.ktp, objects, diagram, checks: checksState, gps, tpRegistry };
     saveBlob(`${project.settlement || 'obsledovanie'}-kontur.json`, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+  };
+  const exportExcel = async () => {
+    const count = await exportProjectExcel(project, normalizeObjects(objects));
+    if (!count) window.alert('В структуре пока нет ПУ для экспорта. Добавьте приборы учета на опорах.');
   };
   const importData = (event) => {
     const file = event.target.files?.[0];
@@ -986,7 +1306,7 @@ function App() {
     if (Number.isFinite(latitude) && Number.isFinite(longitude)) window.open(`https://yandex.ru/maps/?ll=${longitude}%2C${latitude}&z=16&pt=${longitude}%2C${latitude}`, '_blank', 'noopener,noreferrer');
   };
   return <div className="app-shell">
-    <header className="topbar"><div className="brand"><div className="brand-mark"><Zap size={16} fill="currentColor" /></div><span>КОНТУР</span><i /></div><button className="top-context" type="button" onClick={() => { setSelectedTab('map'); setOpenPanel('ktp'); }}><span className="context-kicker">Полевое обследование</span><strong>{project.ktp.name} <ChevronDown size={15} /></strong></button><div className="top-actions"><div className="sync-state"><span /><span>Сохранено локально</span></div><button className="icon-top" type="button" aria-label="Настройки проекта" title="Настройки проекта" onClick={() => navigate('builder')}><Settings2 size={17} /></button><div className="avatar">ДВ</div></div><button className="mobile-menu" type="button" aria-label="Открыть меню" onClick={() => setShowMobileNav(!showMobileNav)}><Menu size={20} /></button></header>
+    <header className="topbar"><div className="brand"><div className="brand-mark"><Zap size={16} fill="currentColor" /></div><span>КОНТУР</span><small className="brand-company">РОССЕТИ</small><i /></div><button className="top-context" type="button" onClick={() => { setSelectedTab('map'); setOpenPanel('ktp'); }}><span className="context-kicker">Полевое обследование</span><strong>{project.ktp.name} <ChevronDown size={15} /></strong></button><div className="top-actions"><div className="sync-state"><span /><span>Сохранено локально</span></div><button className="icon-top" type="button" aria-label="Настройки проекта" title="Настройки проекта" onClick={() => navigate('builder')}><Settings2 size={17} /></button><div className="avatar">ДВ</div></div><button className="mobile-menu" type="button" aria-label="Открыть меню" onClick={() => setShowMobileNav(!showMobileNav)}><Menu size={20} /></button></header>
     <div className="workspace">
       {showMobileNav && <button className="mobile-nav-backdrop" type="button" aria-label="Закрыть меню" onClick={() => setShowMobileNav(false)} />}
       <nav className={`sidebar ${showMobileNav ? 'sidebar-open' : ''}`}>
@@ -1002,9 +1322,15 @@ function App() {
         <button className="nav-item" type="button" onClick={() => navigate('diagram')}><FileText size={17} /><span>Схемы и документы</span></button><button className={`nav-item ${selectedTab === 'builder' ? 'active' : ''}`} type="button" onClick={() => navigate('builder')}><Settings2 size={17} /><span>Настройки проекта</span></button>
         <div className="sidebar-bottom"><div className="weather"><Sun size={18} /><div><strong>+18°</strong><span>Березняки · ясно</span></div></div><div className="operator"><div className="avatar small">ДВ</div><div><strong>Даниил В.</strong><span>Инженер РЭС</span></div><ChevronDown size={15} /></div></div>
       </nav>
+      <div className="mobile-bottom-nav" aria-label="Основная навигация">
+        <button className={selectedTab === 'map' ? 'active' : ''} type="button" onClick={() => navigate('map')}><MapPin size={18} /><span>Карта</span></button>
+        <button className={selectedTab === 'registry' ? 'active' : ''} type="button" onClick={() => navigate('registry')}><Database size={18} /><span>Реестр</span></button>
+        <button className={selectedTab === 'checklist' ? 'active' : ''} type="button" onClick={() => navigate('checklist')}><ClipboardCheck size={18} /><span>Проверка</span></button>
+        <button className={selectedTab === 'builder' ? 'active' : ''} type="button" onClick={() => navigate('builder')}><Settings2 size={18} /><span>Ещё</span></button>
+      </div>
       <main className="main-area">
-        {selectedTab === 'registry' ? <TPRegistryWorkspace records={tpRegistry} search={registrySearch} onSearch={setRegistrySearch} statusFilter={registryStatusFilter} onStatusFilter={setRegistryStatusFilter} surveyFilter={registrySurveyFilter} onSurveyFilter={setRegistrySurveyFilter} selectedId={selectedTpId} onSelect={setSelectedTpId} onSave={saveTpRecord} onCreate={createTpRecord} onImport={importTpRegistry} onReloadSource={reloadTpSource} onExport={exportTpRegistry} onOpenProject={openTpInProject} loading={tpRegistryLoading} /> : <>
-        <div className="page-heading"><div><div className="breadcrumbs"><span>{project.settlement}</span><i>/</i><strong>{project.ktp.name}</strong></div><h1>Обследование линии</h1><p>Сверка схемы с фактическим состоянием сети</p></div><div className="heading-actions"><button className="outline-button" type="button" onClick={exportData}><Download size={16} /> Экспорт отчёта</button><label className="outline-button file-button"><FileUp size={16} /> Импорт<input type="file" accept="application/json,.json" onChange={importData} /></label><button className="primary-button compact gps-action" type="button" onClick={locate}><Crosshair size={16} /> GPS {gps ? 'определён' : 'позиция'}</button></div></div>
+        {selectedTab === 'registry' ? <TPRegistryWorkspace records={tpRegistry} search={deferredRegistrySearch} searchInput={registrySearch} onSearch={setRegistrySearch} statusFilter={registryStatusFilter} onStatusFilter={setRegistryStatusFilter} surveyFilter={registrySurveyFilter} onSurveyFilter={setRegistrySurveyFilter} selectedId={selectedTpId} onSelect={setSelectedTpId} onSave={saveTpRecord} onCreate={createTpRecord} onImport={importTpRegistry} onReloadSource={reloadTpSource} onExport={exportTpRegistry} onExportExcel={exportExcel} onOpenProject={openTpInProject} loading={tpRegistryLoading} /> : <>
+        <div className="page-heading"><div><div className="breadcrumbs"><span>{project.settlement}</span><i>/</i><strong>{project.ktp.name}</strong></div><h1>Обследование линии</h1><p>Сверка схемы с фактическим состоянием сети</p></div><div className="heading-actions"><button className="outline-button" type="button" onClick={exportData}><Download size={16} /> JSON</button><button className="outline-button" type="button" onClick={exportExcel}><FileSpreadsheet size={16} /> Excel</button><label className="outline-button file-button"><FileUp size={16} /> Импорт<input type="file" accept="application/json,.json" onChange={importData} /></label><button className="primary-button compact gps-action" type="button" onClick={locate}><Crosshair size={16} /> GPS {gps ? 'определён' : 'позиция'}</button></div></div>
         <div className="metric-row"><Metric icon={<RadioTower />} label="КТП" value="1" detail="в работе" tone="blue" /><Metric icon={<Route />} label="Фидеры" value={objects.filter((object) => object.type === 'feeder').length} detail="вдоль линии" tone="violet" /><Metric icon={<MapPin />} label="Опоры" value={objects.filter((object) => object.type === 'pole').length} detail="объектов в базе" tone="orange" /><Metric icon={<ShieldAlert />} label="Расхождения" value={objects.filter((object) => object.type === 'pole' && (object.legCount !== object.schemeLegCount || object.meter === 'Не найден')).length} detail="нужно проверить" tone="red" /></div>
         <div className="content-grid">
           <section className="map-card"><div className="card-toolbar"><div className="view-tabs"><button type="button" className={!showScheme ? 'active' : ''} onClick={() => setShowScheme(false)}><MapPin size={15} /> Карта</button><button type="button" className={showScheme ? 'active' : ''} onClick={() => setShowScheme(true)}><GitBranch size={15} /> Схема фидера</button></div><div className="toolbar-right"><button className={`toolbar-button ${showOnlyIssues ? 'active' : ''}`} type="button" onClick={() => setShowOnlyIssues((value) => !value)}><SlidersHorizontal size={15} /> Фильтры {showOnlyIssues ? '· включены' : ''}</button><button className={`toolbar-button ${showLayers ? 'active' : ''}`} type="button" onClick={() => setShowLayers((value) => !value)}><Layers3 size={15} /> Слои</button></div></div><YandexMap objects={objects} center={project.ktp.coords} selectedId={selectedId} onSelect={selectObject} showScheme={showScheme} showLayers={showLayers} search={search} onSearch={setSearch} onLocate={locate} onToggleLayers={() => setShowLayers((value) => !value)} /><div className="map-footer"><div><span className="live-dot" /> <strong>Полевой режим активен</strong><span> · данные сохраняются на устройстве</span></div><button type="button" onClick={locate}><Navigation size={15} /> Центрировать по GPS</button></div></section>
@@ -1018,7 +1344,7 @@ function App() {
       {selectedTab === 'scheme' && <SettlementSchemePanel project={project} objects={objects} onClose={() => navigate('map')} onSelect={selectObject} />}
       {selectedTab === 'diagram' && <DiagramEditorPanel project={project} objects={objects} diagram={diagram} onSave={saveDiagram} onClose={() => navigate('map')} />}
       {selectedTab === 'builder' && <ProjectBuilderPanel project={project} objects={objects} onSave={saveProject} onClose={() => navigate('map')} />}
-      {selectedTab === 'map' && openPanel === 'ktp' && <KtpPanel ktp={project.ktp} onClose={() => setOpenPanel(null)} onExport={exportData} onEdit={() => navigate('builder')} onSync={syncLocal} onOpenAddress={openAddress} />}
+      {selectedTab === 'map' && openPanel === 'ktp' && <KtpPanel ktp={project.ktp} onClose={() => setOpenPanel(null)} onExport={exportData} onExportExcel={exportExcel} onEdit={() => navigate('builder')} onSync={syncLocal} onOpenAddress={openAddress} />}
     </div>
     {showOnboarding && <Onboarding tpCount={tpRegistry.length} onFinish={finishOnboarding} />}
   </div>;
